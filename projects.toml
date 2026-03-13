@@ -1,0 +1,181 @@
+# Metadata for all repositories in all-in-one/
+#
+# upstream_branch: the branch name on origin that represents the upstream main.
+#                  Omit when origin uses "main". The local branch is always "main".
+# setup:           Shell command run from within the repo after each sync, to keep
+#                  the project in a state suitable for IDE navigation (deps, codegen...).
+#                  Omit when no such step is needed.
+
+# --- temporalio -----------------------------------------------------------------
+
+[repos.documentation]
+repository = "temporalio/documentation"
+
+[repos.documentation-snipsync]
+repository = "temporalio/snipsync"
+setup = "pnpm install"
+
+[repos.features]
+repository = "temporalio/features"
+setup = "go mod download"
+
+[repos.homebrew-brew]
+repository = "temporalio/homebrew-brew"
+
+[repos.omes]
+repository = "temporalio/omes"
+setup = "go mod download"
+
+[repos.proposals]
+repository = "temporalio/proposals"
+upstream_branch = "master"
+
+[repos.s2s-proxy]
+repository = "temporalio/s2s-proxy"
+setup = "go mod download"
+
+[repos.setup-temporal]
+repository = "temporalio/setup-temporal"
+
+[repos.temporal-api]
+repository = "temporalio/api"
+upstream_branch = "master"
+
+[repos.temporal-api-cloud]
+repository = "temporalio/api-cloud"
+
+[repos.temporal-api-go]
+repository = "temporalio/api-go"
+upstream_branch = "master"
+setup = "go mod download"
+
+[repos.temporal-cli]
+repository = "temporalio/cli"
+setup = "go mod download"
+
+[repos.temporal-sdk-core]
+repository = "temporalio/sdk-core"
+upstream_branch = "master"
+setup = "cargo fetch"
+
+[repos.temporal-sdk-dotnet]
+repository = "temporalio/sdk-dotnet"
+setup = "dotnet restore"
+
+[repos.temporal-sdk-dotnet-samples]
+repository = "temporalio/samples-dotnet"
+setup = "dotnet restore"
+
+[repos.temporal-sdk-go]
+repository = "temporalio/sdk-go"
+upstream_branch = "master"
+setup = "go mod download"
+
+[repos.temporal-sdk-go-samples]
+repository = "temporalio/samples-go"
+setup = "go mod download"
+
+[repos.temporal-sdk-java]
+repository = "temporalio/sdk-java"
+upstream_branch = "master"
+setup = "./gradlew dependencies --quiet"
+
+[repos.temporal-sdk-java-samples]
+repository = "temporalio/samples-java"
+setup = "./gradlew dependencies --quiet"
+
+[repos.temporal-sdk-php]
+repository = "temporalio/sdk-php"
+upstream_branch = "master"
+
+[repos.temporal-sdk-php-roadrunner]
+repository = "temporalio/roadrunner-temporal"
+upstream_branch = "master"
+
+[repos.temporal-sdk-php-samples]
+repository = "temporalio/samples-php"
+upstream_branch = "master"
+
+[repos.temporal-sdk-python]
+repository = "temporalio/sdk-python"
+setup = "uv sync"
+
+[repos.temporal-sdk-python-samples]
+repository = "temporalio/samples-python"
+setup = "uv sync"
+
+[repos.temporal-sdk-ruby]
+repository = "temporalio/sdk-ruby"
+setup = "bundle install --quiet"
+
+[repos.temporal-sdk-ruby-samples]
+repository = "temporalio/samples-ruby"
+# Seems like this one is not working at the moment
+# setup = "bundle install --quiet"
+
+[repos.temporal-sdk-typescript]
+repository = "temporalio/sdk-typescript"
+setup = "pnpm install"
+
+[repos.temporal-sdk-typescript-samples]
+repository = "temporalio/samples-typescript"
+setup = "pnpm install"
+
+[repos.temporal-server]
+repository = "temporalio/temporal"
+setup = "go mod download"
+
+[repos.ui]
+repository = "temporalio/ui"
+setup = "pnpm install"
+
+[repos.ui-server]
+repository = "temporalio/ui-server"
+setup = "go mod download"
+
+[repos.vscode-debugger-extension]
+repository = "temporalio/vscode-debugger-extension"
+setup = "npm install"
+
+
+# --- nexus-rpc ------------------------------------------------------------------
+
+[repos.nexus-api]
+repository = "nexus-rpc/api"
+
+[repos.nexus-sdk-dotnet]
+repository = "nexus-rpc/sdk-dotnet"
+setup = "dotnet restore"
+
+[repos.nexus-sdk-go]
+repository = "nexus-rpc/sdk-go"
+setup = "go mod download"
+
+[repos.nexus-sdk-java]
+repository = "nexus-rpc/sdk-java"
+setup = "./gradlew dependencies --quiet"
+
+[repos.nexus-sdk-python]
+repository = "nexus-rpc/sdk-python"
+setup = "uv sync"
+
+[repos.nexus-sdk-ruby]
+repository = "nexus-rpc/sdk-ruby"
+# Repo is just a stub at the moment, so no setup is needed
+# setup = "bundle install"
+
+[repos.nexus-sdk-typescript]
+repository = "nexus-rpc/sdk-typescript"
+setup = "npm install"
+
+# --- community ------------------------------------------------------------------
+
+[repos.temporal-sdk-community-haskell]
+repository = "MercuryTechnologies/hs-temporal-sdk"
+
+[repos.temporal-sdk-community-ruby]
+repository = "coinbase/temporal-ruby"
+upstream_branch = "master"
+
+[repos.temporal-sdk-community-swift]
+repository = "apple/swift-temporal-sdk"

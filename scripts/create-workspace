@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Create a new workspace directory with boilerplate files and optional worktrees.
+#
+# Usage: create-workspace <description> [project1 project2 ...]
+#
+# Creates workspaces/YYYYMMDD-<description>/ containing:
+#   instructions.md              blank task template
+#   CLAUDE.md                    templated meta-instructions
+#   .cursor/rules/workspace.mdc  Cursor rules
+#
+# If projects are specified, their worktrees are added immediately.
+
+set -euo pipefail
+
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEMPLATES="$DEVENV/templates/workspace"
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: create-workspace <description> [project1 project2 ...]"
+  exit 1
+fi
+
+DESCRIPTION="$1"
+shift
+PROJECTS=("$@")
+
+# --- create workspace directory ---
+
+DATE=$(date +%Y%m%d)
+WORKSPACE_NAME="${DATE}-${DESCRIPTION}"
+WORKSPACE_DIR="$DEVENV/workspaces/$WORKSPACE_NAME"
+
+if [[ -d "$WORKSPACE_DIR" ]]; then
+  echo "Error: workspace '$WORKSPACE_NAME' already exists."
+  exit 1
+fi
+
+mkdir -p "$WORKSPACE_DIR/.cursor/rules"
+mkdir -p "$WORKSPACE_DIR/.vscode"
+
+# --- scaffold files from templates ---
+
+cp "$TEMPLATES/instructions.md" "$WORKSPACE_DIR/instructions.md"
+cp "$TEMPLATES/.cursor/rules/workspace.mdc" "$WORKSPACE_DIR/.cursor/rules/workspace.mdc"
+cp "$TEMPLATES/.vscode/settings.json" "$WORKSPACE_DIR/.vscode/settings.json"
+
+sed "s/{{WORKSPACE_NAME}}/$WORKSPACE_NAME/g" \
+  "$TEMPLATES/CLAUDE.md" > "$WORKSPACE_DIR/CLAUDE.md"
+
+echo "Created workspace: workspaces/$WORKSPACE_NAME"
+
+# --- add initial worktrees ---
+
+for project in "${PROJECTS[@]}"; do
+  echo "Adding worktree: $project"
+  (cd "$WORKSPACE_DIR" && "$DEVENV/scripts/add-worktree" "$project")
+done
+
+echo ""
+echo "Open in IDE: $WORKSPACE_DIR"
+echo ""
+
+# Ask the user if they want to immediately open the workspace in the IDE
+read -p "Do you want to open the workspace in the IDE? (y/n) " OPEN_IDE
+if [[ "$OPEN_IDE" == "y" ]]; then
+  cursor "$WORKSPACE_DIR"
+fi

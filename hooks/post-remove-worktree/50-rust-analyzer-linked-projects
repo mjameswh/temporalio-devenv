@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Before removing a worktree, clean up its entries from the workspace's
+# .vscode/settings.json rust-analyzer.linkedProjects.
+#
+# Arguments: <project> <workspace_dir> <worktree_dir>
+
+set -euo pipefail
+
+PROJECT="$1"
+WORKSPACE_DIR="$2"
+# $3 (worktree_dir) not needed
+
+SETTINGS="$WORKSPACE_DIR/.vscode/settings.json"
+
+[[ -f "$SETTINGS" ]] || exit 0
+
+UPDATED=$(jq --arg prefix "$PROJECT/" '
+  if .["rust-analyzer.linkedProjects"] then
+    .["rust-analyzer.linkedProjects"] |= map(select(startswith($prefix) | not))
+  else .
+  end
+' "$SETTINGS")
+
+echo "$UPDATED" > "$SETTINGS"
+echo "  Removed $PROJECT entries from .vscode/settings.json"

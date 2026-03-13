@@ -1,0 +1,96 @@
+[tools]
+node = { version = "24", postinstall = "corepack enable pnpm" }
+python = "3.12"
+dotnet = "10"
+rust = "1.93.1"
+java = "temurin-23"
+ruby = "4.0"
+jq = "latest"
+
+[tasks.sync-all]
+description = "Fetch and fast-forward all repos in all-in-one/ to latest upstream"
+run = "scripts/sync-all"
+
+[tasks.create-workspace]
+description = "Create a new workspace with boilerplate files and optional initial worktrees"
+usage = '''
+arg "<name>" help="The name of the new workspace."
+'''
+run = "scripts/create-workspace {{usage.name}}"
+
+[tasks.add-repo]
+description = "Clone a GitHub repo into all-in-one/ following local conventions"
+usage = '''
+arg "<repo>" help="The GitHub repository to clone (e.g. temporalio/sdk-java)."
+arg "<localname>" help="The local name of the repository (e.g. temporal-sdk-java)."
+'''
+run = "scripts/add-repo {{usage.repo}} {{usage.localname}}"
+
+[tasks.delete-workspace]
+description = "Delete a workspace, removing all worktrees and their branches"
+usage = '''
+arg "<workspace>" help="The workspace to delete."
+'''
+run = "scripts/delete-workspace {{usage.workspace}}"
+
+[tasks.add-worktree]
+description = "Add a worktree from all-in-one/<project> into the current workspace"
+usage = '''
+arg "<project>" help="The project to add to the target workspace."
+arg "[workspace]" help="The target workspace. Defaults to current workspace."
+'''
+run = '''
+set -x
+
+root_dir=$(pwd)
+
+{% if usage.workspace %}
+
+  # assert workspace name is a valid directory name inside of workspaces/
+  if [[ ! -d "workspaces/{{usage.workspace}}" ]]; then
+    echo "Error: '{{usage.workspace}}' is not a valid workspace name."
+    exit 1
+  fi
+  cd workspaces/{{usage.workspace}}
+
+{% else %}
+
+  # assert the command is run from within a workspace directory
+  workspace=$( basename $MISE_ORIGINAL_CWD )
+  if [[ $MISE_ORIGINAL_CWD != "$PWD/workspaces/$workspace" ]]; then
+    echo "Error: this command must be run from within a workspace directory."
+    exit 1
+  fi
+  cd workspaces/$workspace
+{% endif %}
+
+${root_dir}/scripts/add-worktree {{usage.project}}
+'''
+
+[tasks.remove-worktree]
+description = "Remove a worktree from the current workspace"
+usage = '''
+arg "<project>" help="The project worktree to remove."
+arg "[workspace]" help="The target workspace. Defaults to current workspace."
+flag "--delete-branch" help="Also delete the branch from the all-in-one repo."
+'''
+run = '''
+root_dir=$(pwd)
+
+{% if usage.workspace %}
+  if [[ ! -d "workspaces/{{usage.workspace}}" ]]; then
+    echo "Error: '{{usage.workspace}}' is not a valid workspace name."
+    exit 1
+  fi
+  cd workspaces/{{usage.workspace}}
+{% else %}
+  workspace=$( basename $MISE_ORIGINAL_CWD )
+  if [[ $MISE_ORIGINAL_CWD != "$PWD/workspaces/$workspace" ]]; then
+    echo "Error: this command must be run from within a workspace directory."
+    exit 1
+  fi
+  cd workspaces/$workspace
+{% endif %}
+
+${root_dir}/scripts/remove-worktree {{usage.project}} {% if usage["delete-branch"] %}--delete-branch{% endif %}
+'''

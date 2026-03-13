@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# After adding a worktree, detect Cargo.toml files and add them to the
+# workspace's .vscode/settings.json under rust-analyzer.linkedProjects.
+#
+# Arguments: <project> <workspace_dir> <worktree_dir>
+
+set -euo pipefail
+
+PROJECT="$1"
+WORKSPACE_DIR="$2"
+WORKTREE_DIR="$3"
+
+SETTINGS="$WORKSPACE_DIR/.vscode/settings.json"
+
+# --- find Cargo.toml files, excluding target/ directories ---
+
+mapfile -t ALL_CARGO < <(
+  find "$WORKTREE_DIR" -name Cargo.toml -not -path "*/target/*" 2>/dev/null
+)
+
+[[ ${#ALL_CARGO[@]} -gt 0 ]] || exit 0
+
+# --- get submodule paths ---
+
+mapfile -t SUBMODULES < <(
+  git -C "$WORKTREE_DIR" submodule status --recursive 2>/dev/null \
+    | awk '{print $2}' || true
+)
+
+# --- filter out Cargo.toml files inside submodules ---
+
+FILTERED=()
+for cargo in "${ALL_CARGO[@]}"; do
+  rel="${cargo#"$WORKTREE_DIR/"}"
+  inside_submodule=false
+  for sub in "${SUBMODULES[@]}"; do
+    if [[ "$rel" == "$sub/"* ]]; then
+      inside_submodule=true
+      break
+    fi
+  done
+  $inside_submodule || FILTERED+=("$cargo")
+done
+
+[[ ${#FILTERED[@]} -gt 0 ]] || exit 0
+
+# --- separate workspace roots vs standalone crates ---
+
+WORKSPACE_TOMLS=()
+STANDALONE_TOMLS=()
+for cargo in "${FILTERED[@]}"; do
+  if grep -q '^\[workspace\]' "$cargo" 2>/dev/null; then
+    WORKSPACE_TOMLS+=("$cargo")
+  else
+    STANDALONE_TOMLS+=("$cargo")
+  fi
+done
+
+# --- select which Cargo.toml to register ---
+# Prefer [workspace] roots; otherwise pick the shallowest standalone.
+
+SELECTED=()
+if [[ ${#WORKSPACE_TOMLS[@]} -gt 0 ]]; then
+  SELECTED=("${WORKSPACE_TOMLS[@]}")
+else
+  shallowest=""
+  shallowest_depth=999
+  for cargo in "${STANDALONE_TOMLS[@]}"; do
+    rel="${cargo#"$WORKTREE_DIR/"}"
+    depth=$(tr -cd '/' <<< "$rel" | wc -c)
+    if (( depth < shallowest_depth )); then
+      shallowest="$cargo"
+      shallowest_depth=$depth
+    fi
+  done
+  [[ -n "$shallowest" ]] && SELECTED=("$shallowest")
+fi
+
+[[ ${#SELECTED[@]} -gt 0 ]] || exit 0
+
+# --- update .vscode/settings.json ---
+
+if [[ ! -f "$SETTINGS" ]]; then
+  mkdir -p "$(dirname "$SETTINGS")"
+  echo '{}' > "$SETTINGS"
+fi
+
+for cargo in "${SELECTED[@]}"; do
+  REL_PATH="${cargo#"$WORKSPACE_DIR/"}"
+  UPDATED=$(jq --arg path "$REL_PATH" '
+    .["rust-analyzer.linkedProjects"] //= [] |
+    if (.["rust-analyzer.linkedProjects"] | index($path)) then .
+    else .["rust-analyzer.linkedProjects"] += [$path]
+    end
+  ' "$SETTINGS")
+  echo "$UPDATED" > "$SETTINGS"
+done
+
+echo "  Added ${#SELECTED[@]} Cargo.toml path(s) to .vscode/settings.json"

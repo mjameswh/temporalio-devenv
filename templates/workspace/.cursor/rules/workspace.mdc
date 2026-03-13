@@ -1,0 +1,10 @@
+---
+description: Workspace instructions
+alwaysApply: true
+---
+
+Always read `instructions.md` at the start of every session. It contains the task
+description and execution plan. Update it as work progresses.
+
+This workspace is part of the Temporal development environment at `~/devenv/temporal/`.
+Each project subdirectory is a git worktree. See `CLAUDE.md` for details.

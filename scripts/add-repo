@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Clone a GitHub repository into all-in-one/ following the local conventions:
+#   - remote named "origin" pointing to the canonical upstream
+#   - local branch always named "main" (created to track origin's default branch)
+#   - submodules initialized if present
+#   - entry always added to projects.toml (or projects.local.toml if --private)
+#
+# Usage: add-repo <github-org/repo> <local-name> [--setup <cmd>] [--private]
+#
+# Examples:
+#   add-repo temporalio/sdk-java temporal-sdk-java
+#   add-repo temporalio/sdk-java temporal-sdk-java --setup "./gradlew dependencies"
+#   add-repo myorg/secret-repo my-secret --private
+
+set -euo pipefail
+
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ALL_IN_ONE="$DEVENV/all-in-one"
+PROJECTS_TOML="$DEVENV/projects.toml"
+PROJECTS_LOCAL_TOML="$DEVENV/projects.local.toml"
+
+# --- argument parsing ---
+
+if [[ $# -lt 2 ]]; then
+  echo "Usage: add-repo <github-org/repo> <local-name> [--setup <cmd>] [--private]"
+  echo ""
+  echo "Examples:"
+  echo "  add-repo temporalio/sdk-java temporal-sdk-java"
+  echo "  add-repo temporalio/sdk-java temporal-sdk-java --setup './gradlew dependencies'"
+  echo "  add-repo myorg/secret-repo my-secret --private"
+  exit 1
+fi
+
+GITHUB_SLUG="$1"
+LOCAL_NAME="$2"
+SETUP_CMD=""
+PRIVATE=false
+
+shift 2
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --setup) SETUP_CMD="$2"; shift 2 ;;
+    --private) PRIVATE=true; shift ;;
+    *) echo "Unknown argument: $1"; exit 1 ;;
+  esac
+done
+
+LOCAL_DIR="$ALL_IN_ONE/$LOCAL_NAME"
+
+if [[ -d "$LOCAL_DIR" ]]; then
+  echo "Error: $LOCAL_DIR already exists."
+  exit 1
+fi
+
+# --- clone ---
+
+echo "Cloning $GITHUB_SLUG → all-in-one/$LOCAL_NAME ..."
+git clone "git@github.com:$GITHUB_SLUG.git" "$LOCAL_DIR" --origin origin --quiet
+
+# --- detect upstream default branch ---
+
+UPSTREAM_BRANCH=$(
+  git -C "$LOCAL_DIR" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+    | sed 's|refs/remotes/origin/||' \
+  || git -C "$LOCAL_DIR" remote show origin \
+    | awk '/HEAD branch/ {print $NF}'
+)
+
+echo "Upstream default branch: $UPSTREAM_BRANCH"
+
+# --- create local main branch ---
+
+if [[ "$UPSTREAM_BRANCH" != "main" ]]; then
+  echo "Creating local 'main' tracking origin/$UPSTREAM_BRANCH ..."
+  git -C "$LOCAL_DIR" checkout -b main --track "origin/$UPSTREAM_BRANCH"
+fi
+
+# --- initialize submodules ---
+
+if [[ -f "$LOCAL_DIR/.gitmodules" ]]; then
+  echo "Initializing submodules ..."
+  git -C "$LOCAL_DIR" submodule update --init --recursive --quiet
+fi
+
+# --- update projects.toml or projects.local.toml ---
+
+if $PRIVATE; then
+  TARGET_TOML="$PROJECTS_LOCAL_TOML"
+  TARGET_LABEL="projects.local.toml"
+else
+  TARGET_TOML="$PROJECTS_TOML"
+  TARGET_LABEL="projects.toml"
+fi
+
+python3 - "$TARGET_TOML" "$LOCAL_NAME" "$GITHUB_SLUG" "$UPSTREAM_BRANCH" "$SETUP_CMD" <<'PYEOF'
+import sys
+
+toml_file = sys.argv[1]
+repo_name = sys.argv[2]
+github_slug = sys.argv[3]
+upstream_branch = sys.argv[4]
+setup_cmd = sys.argv[5]
+
+lines = [f"\n[repos.{repo_name}]", f'repository = "{github_slug}"']
+if upstream_branch != "main":
+    lines.append(f'upstream_branch = "{upstream_branch}"')
+if setup_cmd:
+    lines.append(f'setup = "{setup_cmd}"')
+
+with open(toml_file, "a") as f:
+    f.write("\n".join(lines) + "\n")
+PYEOF
+
+echo "Added [repos.$LOCAL_NAME] to $TARGET_LABEL"
+
+# --- done ---
+
+echo ""
+echo "Done. $GITHUB_SLUG added to all-in-one/$LOCAL_NAME"

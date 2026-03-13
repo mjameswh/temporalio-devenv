@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Remove a git worktree from the current workspace, including repos with submodules.
+# Run from within a workspace directory (under workspaces/).
+#
+# Usage: remove-worktree <project> [--delete-branch]
+#
+#   --delete-branch  also delete the branch from the all-in-one repo after removal
+
+set -euo pipefail
+
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ALL_IN_ONE="$DEVENV/all-in-one"
+
+# --- argument parsing ---
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: remove-worktree <project> [--delete-branch]"
+  exit 1
+fi
+
+PROJECT="$1"
+shift
+
+DELETE_BRANCH=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --delete-branch|-d) DELETE_BRANCH=true; shift ;;
+    *) echo "Unknown argument: $1"; exit 1 ;;
+  esac
+done
+
+# --- validate ---
+
+WORKTREE_DIR="$PWD/$PROJECT"
+PROJECT_DIR="$ALL_IN_ONE/$PROJECT"
+
+if [[ ! -d "$WORKTREE_DIR" ]]; then
+  echo "Error: $WORKTREE_DIR does not exist."
+  exit 1
+fi
+
+if [[ ! -d "$PROJECT_DIR/.git" ]]; then
+  echo "Error: '$PROJECT' not found in all-in-one/"
+  exit 1
+fi
+
+# --- capture branch before deletion ---
+
+BRANCH=$(git -C "$WORKTREE_DIR" branch --show-current 2>/dev/null || echo "")
+
+# --- run post-remove-worktree hooks ---
+
+HOOK_DIR="$DEVENV/hooks/post-remove-worktree"
+if [[ -d "$HOOK_DIR" ]]; then
+  for hook in "$HOOK_DIR"/*; do
+    [[ -x "$hook" ]] || continue
+    echo "Running hook: $(basename "$hook")"
+    if ! "$hook" "$PROJECT" "$PWD" "$WORKTREE_DIR"; then
+      echo "Warning: hook '$(basename "$hook")' failed (exit $?), continuing."
+    fi
+  done
+fi
+
+# --- remove ---
+
+rm -rf "$WORKTREE_DIR"
+git -C "$PROJECT_DIR" worktree prune
+
+echo "Removed worktree $WORKTREE_DIR"
+
+# --- optionally delete the branch ---
+
+if $DELETE_BRANCH; then
+  if [[ -z "$BRANCH" ]]; then
+    echo "Warning: could not determine branch name, skipping branch deletion."
+  elif [[ "$BRANCH" == "main" ]]; then
+    echo "Refusing to delete branch 'main'."
+  else
+    git -C "$PROJECT_DIR" branch -d "$BRANCH"
+    echo "Deleted branch '$BRANCH' from all-in-one/$PROJECT"
+  fi
+elif [[ -n "$BRANCH" ]] && [[ "$BRANCH" != "main" ]]; then
+  echo "Branch '$BRANCH' kept in all-in-one/$PROJECT (use --delete-branch to remove it)"
+fi

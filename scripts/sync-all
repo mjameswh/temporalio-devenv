@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+# Fetch and fast-forward all repos in all-in-one/ to latest upstream,
+# then run each repo's setup command for IDE navigation.
+# Repos listed in projects.toml / projects.local.toml that are missing
+# from all-in-one/ are cloned automatically before syncing.
+#
+# Usage: sync-all [--no-setup] [--no-clone] [repo-name ...]
+#   --no-setup   skip setup commands (just git sync)
+#   --no-clone   skip cloning of missing repos
+#   repo-name    sync only the specified repos (default: all)
+
+set -euo pipefail
+
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ALL_IN_ONE="$DEVENV/all-in-one"
+PROJECTS_TOML="$DEVENV/projects.toml"
+PROJECTS_LOCAL_TOML="$DEVENV/projects.local.toml"
+
+# --- argument parsing ---
+
+RUN_SETUP=true
+RUN_CLONE=true
+FILTER=()
+
+for arg in "$@"; do
+  case "$arg" in
+    --no-setup) RUN_SETUP=false ;;
+    --no-clone) RUN_CLONE=false ;;
+    *) FILTER+=("$arg") ;;
+  esac
+done
+
+# --- load repo config from projects.toml (and projects.local.toml if present) ---
+# Outputs lines of the form: <name> <US> <upstream_branch> <US> <setup_cmd> <US> <repository>
+# Fields are separated by ASCII Unit Separator (0x1F) instead of tab, because
+# bash `read` collapses consecutive tabs (tab is IFS-whitespace), which would
+# swallow empty fields and shift subsequent values into the wrong variables.
+# Local file entries take precedence over the public file.
+
+load_config() {
+  python3 - "$PROJECTS_TOML" "$PROJECTS_LOCAL_TOML" <<'PYEOF'
+import tomllib, sys, os
+
+def load_toml(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "rb") as f:
+        return tomllib.load(f)
+
+data = load_toml(sys.argv[1])
+local = load_toml(sys.argv[2])
+
+# Merge: local entries override public ones
+repos = {**data.get("repos", {}), **local.get("repos", {})}
+
+for name, cfg in repos.items():
+    upstream_branch = cfg.get("upstream_branch", "main")
+    setup = cfg.get("setup", "")
+    repository = cfg.get("repository", "")
+    print(f"{name}\x1f{upstream_branch}\x1f{setup}\x1f{repository}")
+PYEOF
+}
+
+declare -A UPSTREAM_BRANCH
+declare -A SETUP_CMD
+declare -A REPOSITORY
+
+while IFS=$'\x1f' read -r name upstream_branch setup repository; do
+  UPSTREAM_BRANCH[$name]="$upstream_branch"
+  SETUP_CMD[$name]="$setup"
+  REPOSITORY[$name]="$repository"
+done < <(load_config)
+
+# --- clone missing repos ---
+
+_passes_filter() {
+  local name="$1"
+  [[ ${#FILTER[@]} -eq 0 ]] && return 0
+  for f in "${FILTER[@]}"; do
+    [[ "$name" == "$f" ]] && return 0
+  done
+  return 1
+}
+
+if $RUN_CLONE; then
+  CLONE_HEADER_PRINTED=false
+
+  for name in "${!REPOSITORY[@]}"; do
+    local_dir="$ALL_IN_ONE/$name"
+    repository="${REPOSITORY[$name]}"
+
+    [[ -n "$repository" ]] || continue
+    [[ -d "$local_dir" ]] && continue
+    _passes_filter "$name" || continue
+
+    if ! $CLONE_HEADER_PRINTED; then
+      echo "Cloning missing repositories..."
+      echo ""
+      CLONE_HEADER_PRINTED=true
+    fi
+
+    upstream_branch="${UPSTREAM_BRANCH[$name]:-main}"
+    printf "  %-43s" "$name"
+
+    if git clone "git@github.com:${repository}.git" "$local_dir" --origin origin --quiet 2>/dev/null; then
+      if [[ "$upstream_branch" != "main" ]]; then
+        git -C "$local_dir" checkout -b main --track "origin/$upstream_branch" --quiet 2>/dev/null
+      fi
+      if [[ -f "$local_dir/.gitmodules" ]]; then
+        git -C "$local_dir" submodule update --init --recursive --quiet
+      fi
+      printf " cloned\n"
+    else
+      printf " CLONE FAILED\n"
+      ((ERRORS++)) || true
+    fi
+  done
+
+  $CLONE_HEADER_PRINTED && echo ""
+fi
+
+# --- sync a single repo ---
+
+sync_repo() {
+  local dir="$1"
+  local name
+  name=$(basename "$dir")
+
+  # Skip non-git directories
+  [[ -d "$dir/.git" ]] || return 0
+
+  local upstream_branch="${UPSTREAM_BRANCH[$name]:-main}"
+  local setup=""
+  $RUN_SETUP && setup="${SETUP_CMD[$name]:-}"
+
+  printf "%-45s" "  $name"
+
+  # Fetch
+  if ! git -C "$dir" fetch origin --prune --quiet 2>&1; then
+    printf " FETCH FAILED\n"
+    return 1
+  fi
+
+  # Fast-forward
+  local before after
+  before=$(git -C "$dir" rev-parse HEAD)
+  if ! git -C "$dir" merge --ff-only "origin/$upstream_branch" --quiet 2>&1; then
+    printf " MERGE FAILED (local changes?)\n"
+    return 1
+  fi
+  after=$(git -C "$dir" rev-parse HEAD)
+
+  if [[ "$before" == "$after" ]]; then
+    printf " up to date"
+  else
+    local count
+    count=$(git -C "$dir" rev-list --count "$before..$after")
+    printf " +%d commit(s)" "$count"
+  fi
+
+  # Update submodules if present
+  if [[ -f "$dir/.gitmodules" ]]; then
+    git -C "$dir" submodule update --init --recursive --quiet
+    printf " [submodules]"
+  fi
+
+  # Run setup command
+  if [[ -n "$setup" ]]; then
+    printf " [setup]"
+    if ! (cd "$dir" && eval "$setup")>/dev/null 2>&1; then
+      printf " SETUP FAILED\n"
+      return 1
+    fi
+  fi
+
+  printf "\n"
+}
+
+# --- main ---
+
+echo "Syncing all-in-one repositories..."
+echo ""
+
+ERRORS=0
+
+for repo_dir in "$ALL_IN_ONE"/*/; do
+  [[ -d "$repo_dir" ]] || continue
+  name=$(basename "$repo_dir")
+
+  _passes_filter "$name" || continue
+
+  sync_repo "$repo_dir" || ((ERRORS++)) || true
+done
+
+echo ""
+if [[ $ERRORS -eq 0 ]]; then
+  echo "Done."
+else
+  echo "Done with $ERRORS error(s). Run individual repos manually for details."
+  exit 1
+fi
