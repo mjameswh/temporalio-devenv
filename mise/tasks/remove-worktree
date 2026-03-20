@@ -1,37 +1,42 @@
 #!/usr/bin/env bash
-# Remove a git worktree from the current workspace, including repos with submodules.
-# Run from within a workspace directory (under workspaces/).
+#MISE description="Remove a worktree from the current workspace"
+#MISE quiet=true
 #
-# Usage: remove-worktree <project> [--delete-branch]
-#
-#   --delete-branch  also delete the branch from the all-in-one repo after removal
+#USAGE arg "<project>" help="The project worktree to remove"
+#USAGE arg "[workspace]" help="The target workspace. Defaults to current workspace."
+#USAGE flag "--delete-branch" help="Also delete the branch from the all-in-one repo"
+#USAGE complete "project" run="mise run list-projects"
+#USAGE complete "workspace" run="mise run list-workspaces"
 
 set -euo pipefail
 
-DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ALL_IN_ONE="$DEVENV/all-in-one"
 
-# --- argument parsing ---
-
-if [[ $# -lt 1 ]]; then
-  echo "Usage: remove-worktree <project> [--delete-branch]"
-  exit 1
-fi
-
-PROJECT="$1"
-shift
-
+PROJECT="$usage_project"
 DELETE_BRANCH=false
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --delete-branch|-d) DELETE_BRANCH=true; shift ;;
-    *) echo "Unknown argument: $1"; exit 1 ;;
-  esac
-done
+[[ "${usage_delete_branch:-}" == "true" ]] && DELETE_BRANCH=true
+
+# --- resolve workspace directory ---
+
+if [[ -n "${usage_workspace:-}" ]]; then
+  if [[ ! -d "$DEVENV/workspaces/$usage_workspace" ]]; then
+    echo "Error: '$usage_workspace' is not a valid workspace name."
+    exit 1
+  fi
+  WORKSPACE_DIR="$DEVENV/workspaces/$usage_workspace"
+else
+  workspace=$(basename "$MISE_ORIGINAL_CWD")
+  if [[ "$MISE_ORIGINAL_CWD" != "$DEVENV/workspaces/$workspace" ]]; then
+    echo "Error: this command must be run from within a workspace directory."
+    exit 1
+  fi
+  WORKSPACE_DIR="$DEVENV/workspaces/$workspace"
+fi
 
 # --- validate ---
 
-WORKTREE_DIR="$PWD/$PROJECT"
+WORKTREE_DIR="$WORKSPACE_DIR/$PROJECT"
 PROJECT_DIR="$ALL_IN_ONE/$PROJECT"
 
 if [[ ! -d "$WORKTREE_DIR" ]]; then
@@ -55,7 +60,7 @@ if [[ -d "$HOOK_DIR" ]]; then
   for hook in "$HOOK_DIR"/*; do
     [[ -x "$hook" ]] || continue
     echo "Running hook: $(basename "$hook")"
-    if ! "$hook" "$PROJECT" "$PWD" "$WORKTREE_DIR"; then
+    if ! "$hook" "$PROJECT" "$WORKSPACE_DIR" "$WORKTREE_DIR"; then
       echo "Warning: hook '$(basename "$hook")' failed (exit $?), continuing."
     fi
   done

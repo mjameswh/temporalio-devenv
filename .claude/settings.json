@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/**)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm run *)",
+      "Bash(pnpm exec *)",
+      "Bash(grep *)",
+      "Bash(uv run *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet format *)",
+      "Bash(bundle exec *)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(git status *)",
+      "Bash(cargo test *)",
+      "Bash(./gradlew *)"
+    ]
+  },
+  "autoMemoryDirectory": ".claude/memory"
+}

@@ -1,49 +1,24 @@
 #!/usr/bin/env bash
-# Clone a GitHub repository into all-in-one/ following the local conventions:
-#   - remote named "origin" pointing to the canonical upstream
-#   - local branch always named "main" (created to track origin's default branch)
-#   - submodules initialized if present
-#   - entry always added to projects.toml (or projects.local.toml if --private)
+#MISE description="Clone a GitHub repo into all-in-one/ following local conventions"
+#MISE quiet=true
 #
-# Usage: add-repo <github-org/repo> <local-name> [--setup <cmd>] [--private]
-#
-# Examples:
-#   add-repo temporalio/sdk-java temporal-sdk-java
-#   add-repo temporalio/sdk-java temporal-sdk-java --setup "./gradlew dependencies"
-#   add-repo myorg/secret-repo my-secret --private
+#USAGE arg "<repo>" help="The GitHub repository to clone (e.g. temporalio/sdk-java)"
+#USAGE arg "<localname>" help="The local name of the repository (e.g. temporal-sdk-java)"
+#USAGE flag "--setup <cmd>" help="Setup command to run after cloning"
+#USAGE flag "--private" help="Write metadata to projects.local.toml instead of projects.toml"
 
 set -euo pipefail
 
-DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ALL_IN_ONE="$DEVENV/all-in-one"
 PROJECTS_TOML="$DEVENV/projects.toml"
 PROJECTS_LOCAL_TOML="$DEVENV/projects.local.toml"
 
-# --- argument parsing ---
-
-if [[ $# -lt 2 ]]; then
-  echo "Usage: add-repo <github-org/repo> <local-name> [--setup <cmd>] [--private]"
-  echo ""
-  echo "Examples:"
-  echo "  add-repo temporalio/sdk-java temporal-sdk-java"
-  echo "  add-repo temporalio/sdk-java temporal-sdk-java --setup './gradlew dependencies'"
-  echo "  add-repo myorg/secret-repo my-secret --private"
-  exit 1
-fi
-
-GITHUB_SLUG="$1"
-LOCAL_NAME="$2"
-SETUP_CMD=""
+GITHUB_SLUG="$usage_repo"
+LOCAL_NAME="$usage_localname"
+SETUP_CMD="${usage_setup:-}"
 PRIVATE=false
-
-shift 2
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --setup) SETUP_CMD="$2"; shift 2 ;;
-    --private) PRIVATE=true; shift ;;
-    *) echo "Unknown argument: $1"; exit 1 ;;
-  esac
-done
+[[ "${usage_private:-}" == "true" ]] && PRIVATE=true
 
 LOCAL_DIR="$ALL_IN_ONE/$LOCAL_NAME"
 

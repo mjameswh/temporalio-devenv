@@ -15,11 +15,11 @@ engineering work, owned by @mjameswh.
   cross-repo workflows, etc.). Read the relevant skill files before undertaking those
   tasks.
 - `knowledge/` — Reference material: architecture docs, project-specific facts, etc.
-- `scripts/` — Automation scripts, invoked via mise tasks (see below).
+- `mise/tasks/` — Mise file tasks (executable scripts) for environment automation.
 - `projects.toml` — Metadata for public repos in `all-in-one/` (upstream branch names,
   IDE setup commands). Committed and safe to publish.
 - `projects.local.toml` — Same schema; gitignored. Add private/non-public repo entries
-  here so they don't appear in the public file. Merged automatically by scripts.
+  here so they don't appear in the public file. Merged automatically by tasks.
 
 ## Git conventions
 

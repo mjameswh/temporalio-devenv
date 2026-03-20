@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Clone a GitHub repo into all-in-one/ following local conventions"
+#MISE quiet=true
+
+set -euo pipefail
+
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+WORKSPACES="$DEVENV/workspaces"
+
+cd "$WORKSPACES"
+ls

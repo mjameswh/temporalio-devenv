@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+#MISE description="Create a new workspace with boilerplate files and optional initial worktrees"
+#MISE quiet=true
+#
+#USAGE flag "--editor" negate="--no-editor" help="Open the workspace in the IDE after creation"
+#USAGE arg "<name>" help="The name of the new workspace"
+#USAGE arg "[projects]..." help="Projects to add as initial worktrees"
+#USAGE complete "projects" run="mise run list-projects"
+
+set -euo pipefail
+
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TEMPLATES="$DEVENV/templates/workspace"
+
+OPEN_EDITOR=""
+[[ "${usage_editor:-}" == "true" ]] && OPEN_EDITOR="yes"
+[[ "${usage_editor:-}" == "false" ]] && OPEN_EDITOR="no"
+
+DESCRIPTION="$usage_name"
+IFS=' ' read -ra PROJECTS <<< "${usage_projects:-}"
+
+# --- create workspace directory ---
+
+DATE=$(date +%Y%m%d)
+WORKSPACE_NAME="${DATE}-${DESCRIPTION}"
+WORKSPACE_DIR="$DEVENV/workspaces/$WORKSPACE_NAME"
+
+if [[ -d "$WORKSPACE_DIR" ]]; then
+  echo "Error: workspace '$WORKSPACE_NAME' already exists."
+  exit 1
+fi
+
+mkdir -p "$WORKSPACE_DIR/.cursor/rules"
+mkdir -p "$WORKSPACE_DIR/.vscode"
+mkdir -p "$WORKSPACE_DIR/.claude/memory"
+
+# --- scaffold files from templates ---
+
+cp "$TEMPLATES/instructions.md" "$WORKSPACE_DIR/instructions.md"
+cp "$TEMPLATES/.cursor/rules/workspace.mdc" "$WORKSPACE_DIR/.cursor/rules/workspace.mdc"
+cp "$TEMPLATES/.vscode/settings.json" "$WORKSPACE_DIR/.vscode/settings.json"
+cp "$TEMPLATES/.claude/settings.json" "$WORKSPACE_DIR/.claude/settings.json"
+
+sed "s/{{WORKSPACE_NAME}}/$WORKSPACE_NAME/g" \
+  "$TEMPLATES/CLAUDE.md" > "$WORKSPACE_DIR/CLAUDE.md"
+
+echo "Created workspace: workspaces/$WORKSPACE_NAME"
+
+# --- add initial worktrees ---
+
+for project in "${PROJECTS[@]}"; do
+  [[ -z "$project" ]] && continue
+  echo "Adding worktree: $project"
+  (cd "$WORKSPACE_DIR" && "$DEVENV/mise/tasks/add-worktree" "$project")
+done
+
+if [[ "$OPEN_EDITOR" == "yes" ]]; then
+  echo ""
+  echo "Open in IDE: $WORKSPACE_DIR"
+  echo ""
+  open -a Cursor "$WORKSPACE_DIR"
+elif [[ "$OPEN_EDITOR" == "no" ]]; then
+  : # do nothing
+elif [[ -t 0 ]]; then
+  read -p "Do you want to open the workspace in the IDE? (y/n) " REPLY
+  if [[ "$REPLY" == "y" ]]; then
+    open -a Cursor "$WORKSPACE_DIR"
+  fi
+fi

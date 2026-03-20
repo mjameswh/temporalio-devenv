@@ -1,0 +1,8 @@
+# Periodically update repositories in all-in-one/
+
+# Weekday working hours (Mon-Fri 8AM-9PM): every hour
+7 8-21 * * 1-5  cd {{DEVENV_ROOT}} && {{MISE}} run sync-all >> {{DEVENV_ROOT}}/tmp/temporal-sync.log 2>&1
+
+# Weekends and weekdays off-hours: every 6 hours
+7 0,6 * * 1-5  cd {{DEVENV_ROOT}} && {{MISE}} run sync-all >> {{DEVENV_ROOT}}/tmp/temporal-sync.log 2>&1
+7 0,6,12,18 * * 0,6  cd {{DEVENV_ROOT}} && {{MISE}} run sync-all >> {{DEVENV_ROOT}}/tmp/temporal-sync.log 2>&1

@@ -1,0 +1,16 @@
+{
+  "java.compile.nullAnalysis.mode": "automatic",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "rust-analyzer.linkedProjects": [
+    "all-in-one/temporal-sdk-core/Cargo.toml",
+    "all-in-one/temporal-sdk-dotnet/src/Temporalio/Bridge/Cargo.toml",
+    "all-in-one/temporal-sdk-python/temporalio/bridge/Cargo.toml",
+    "all-in-one/temporal-sdk-ruby/temporalio/Cargo.toml",
+    "all-in-one/temporal-sdk-typescript/packages/core-bridge/Cargo.toml",
+    "all-in-one/temporal-sdk-community-haskell/core/rust/Cargo.toml",
+    "all-in-one/omes/loadgen/kitchen-sink-gen/Cargo.toml"
+  ],
+  "git.autoRepositoryDetection": "subFolders",
+  "git.repositoryScanMaxDepth": 1,
+  "git.repositoryScanIgnoredFolders": ["all-in-one", "workspaces"]
+}

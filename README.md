@@ -61,6 +61,48 @@ mise run sync-all
 The initial sync takes a few minutes — it clones ~50 repos and installs their dependencies.
 Subsequent runs only fetch and fast-forward.
 
+## Automatic sync (optional)
+
+A crontab template is provided in `templates/crontab` that keeps `all-in-one/` repos
+up to date automatically — hourly during USA working hours (Mon–Fri 8 AM–9 PM) and
+every 6 hours otherwise.
+
+To install it, replace the `{{DEVENV_ROOT}}` and `{{MISE}}` placeholders and load it
+into your crontab. `{{MISE}}` must be the absolute path to the `mise` binary (cron
+does not load your shell profile, so a bare `mise` won't work):
+
+```sh
+sed -e 's|{{DEVENV_ROOT}}|/path/to/my-temporal-devenv|g' \
+    -e 's|{{MISE}}|/opt/homebrew/bin/mise|g' \
+    templates/crontab | crontab -
+```
+
+Common `mise` locations: `/opt/homebrew/bin/mise` (macOS Homebrew),
+`~/.local/bin/mise` (curl installer), `/usr/bin/mise` (Linux packages).
+
+> **Note:** If you already have crontab entries you want to keep, merge manually
+> instead of piping directly to `crontab -` (which replaces the entire crontab).
+
+Sync output is logged to `tmp/temporal-sync.log` inside the devenv root.
+
+On macOS, you may be prompted to grant cron Full Disk Access in
+**System Settings → Privacy & Security** the first time it runs.
+
+### Removing the cron jobs
+
+To remove the automatic sync (e.g. before uninstalling or moving the devenv):
+
+```sh
+crontab -l | grep -v '/path/to/my-temporal-devenv' | crontab -
+```
+
+where `/path/to/my-temporal-devenv` is the path you used during setup. Or, if these
+are your only crontab entries, simply run:
+
+```sh
+crontab -r
+```
+
 ## Common tasks
 
 | Command                                      | Description                                          |

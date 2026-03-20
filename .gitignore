@@ -1,7 +1,9 @@
 all-in-one/*
 workspaces/*
 projects.local.toml
+
 tmp/*
 .mypy_cache/*
+.claude/scheduled_tasks.lock
 
 !.gitkeep

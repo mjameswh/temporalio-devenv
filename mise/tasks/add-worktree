@@ -1,37 +1,37 @@
 #!/usr/bin/env bash
-# Add a git worktree from all-in-one/<project> into the current workspace.
-# Run from within a workspace directory (under workspaces/).
+#MISE description="Add a worktree from all-in-one/<project> into the current workspace"
+#MISE quiet=true
 #
-# Usage: add-worktree <project> [--branch <name>]
-#
-# The default branch name is derived from the workspace directory name
-# by stripping the leading date prefix (e.g. 20260219-fix-issue → fix-issue).
+#USAGE arg "<project>" help="The project to add to the target workspace"
+#USAGE arg "[workspace]" help="The target workspace. Defaults to current workspace."
+#USAGE flag "-b --branch <name>" help="Branch name override (default: derived from workspace name)"
+#USAGE complete "project" run="mise run list-projects"
+#USAGE complete "workspace" run="mise run list-workspaces"
 
 set -euo pipefail
 
-DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ALL_IN_ONE="$DEVENV/all-in-one"
 
-# --- argument parsing ---
+PROJECT="$usage_project"
+BRANCH_OVERRIDE="${usage_branch:-}"
 
-if [[ $# -lt 1 ]]; then
-  echo "Usage: add-worktree <project> [--branch <name>]"
-  echo ""
-  echo "Available projects:"
-  ls "$ALL_IN_ONE"
-  exit 1
+# --- resolve workspace directory ---
+
+if [[ -n "${usage_workspace:-}" ]]; then
+  if [[ ! -d "$DEVENV/workspaces/$usage_workspace" ]]; then
+    echo "Error: '$usage_workspace' is not a valid workspace name."
+    exit 1
+  fi
+  WORKSPACE_DIR="$DEVENV/workspaces/$usage_workspace"
+else
+  workspace=$(basename "$MISE_ORIGINAL_CWD")
+  if [[ "$MISE_ORIGINAL_CWD" != "$DEVENV/workspaces/$workspace" ]]; then
+    echo "Error: this command must be run from within a workspace directory."
+    exit 1
+  fi
+  WORKSPACE_DIR="$DEVENV/workspaces/$workspace"
 fi
-
-PROJECT="$1"
-shift
-
-BRANCH_OVERRIDE=""
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --branch|-b) BRANCH_OVERRIDE="$2"; shift 2 ;;
-    *) echo "Unknown argument: $1"; exit 1 ;;
-  esac
-done
 
 # --- validate project ---
 
@@ -46,7 +46,6 @@ fi
 
 # --- determine target path ---
 
-WORKSPACE_DIR="$PWD"
 WORKTREE_DIR="$WORKSPACE_DIR/$PROJECT"
 
 if [[ -d "$WORKTREE_DIR" ]]; then

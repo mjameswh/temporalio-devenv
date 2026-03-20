@@ -1,34 +1,25 @@
 #!/usr/bin/env bash
-# Fetch and fast-forward all repos in all-in-one/ to latest upstream,
-# then run each repo's setup command for IDE navigation.
-# Repos listed in projects.toml / projects.local.toml that are missing
-# from all-in-one/ are cloned automatically before syncing.
+#MISE description="Fetch and fast-forward all repos in all-in-one/ to latest upstream"
+#MISE quiet=true
 #
-# Usage: sync-all [--no-setup] [--no-clone] [repo-name ...]
-#   --no-setup   skip setup commands (just git sync)
-#   --no-clone   skip cloning of missing repos
-#   repo-name    sync only the specified repos (default: all)
+#USAGE flag "--no-setup" help="Skip setup commands (just git sync)"
+#USAGE flag "--no-clone" help="Skip cloning of missing repos"
+#USAGE arg "[repos]..." help="Sync only the specified repos (default: all)"
 
 set -euo pipefail
 
-DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEVENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ALL_IN_ONE="$DEVENV/all-in-one"
 PROJECTS_TOML="$DEVENV/projects.toml"
 PROJECTS_LOCAL_TOML="$DEVENV/projects.local.toml"
-
-# --- argument parsing ---
 
 RUN_SETUP=true
 RUN_CLONE=true
 FILTER=()
 
-for arg in "$@"; do
-  case "$arg" in
-    --no-setup) RUN_SETUP=false ;;
-    --no-clone) RUN_CLONE=false ;;
-    *) FILTER+=("$arg") ;;
-  esac
-done
+[[ "${usage_no_setup:-}" == "true" ]] && RUN_SETUP=false
+[[ "${usage_no_clone:-}" == "true" ]] && RUN_CLONE=false
+IFS=' ' read -ra FILTER <<< "${usage_repos:-}"
 
 # --- load repo config from projects.toml (and projects.local.toml if present) ---
 # Outputs lines of the form: <name> <US> <upstream_branch> <US> <setup_cmd> <US> <repository>
@@ -102,7 +93,7 @@ if $RUN_CLONE; then
     upstream_branch="${UPSTREAM_BRANCH[$name]:-main}"
     printf "  %-43s" "$name"
 
-    if git clone "git@github.com:${repository}.git" "$local_dir" --origin origin --quiet 2>/dev/null; then
+    if git clone "https://github.com/${repository}.git" "$local_dir" --origin origin --quiet 2>/dev/null; then
       if [[ "$upstream_branch" != "main" ]]; then
         git -C "$local_dir" checkout -b main --track "origin/$upstream_branch" --quiet 2>/dev/null
       fi
