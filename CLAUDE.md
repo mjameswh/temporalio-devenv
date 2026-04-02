@@ -10,7 +10,8 @@ engineering work, owned by @mjameswh.
   push, or switch branches here.**
 - `workspaces/` — One subdirectory per task (named `YYYYMMDD-<description>`). Each
   workspace contains git worktrees of the relevant projects and an `instructions.md`
-  describing the task.
+  describing the task. **Never create, modify, or delete workspace directories directly;
+  always use the mise tasks.**
 - `skills/` — Reusable procedural instructions for recurring tasks (release processes,
   cross-repo workflows, etc.). Read the relevant skill files before undertaking those
   tasks.
@@ -37,10 +38,15 @@ repo.
 | Task | Description |
 |---|---|
 | `mise run sync-all` | Clone missing repos, fetch and fast-forward all `all-in-one` repos, run per-repo setup |
-| `mise run sync-all -- --no-setup` | Same, skip setup commands |
-| `mise run sync-all -- --no-clone` | Same, skip cloning of missing repos |
+| `mise run sync-all --no-setup` | Same, skip setup commands |
+| `mise run sync-all --no-clone` | Same, skip cloning of missing repos |
 | `mise run add-repo <org/repo> <local-name>` | Clone a new repo into `all-in-one/` (public) |
-| `mise run add-repo <org/repo> <local-name> -- --private` | Same, writing metadata to `projects.local.toml` |
+| `mise run add-repo <org/repo> <local-name> --private` | Same, writing metadata to `projects.local.toml` |
+| `mise run add-repo <org/repo> <local-name> --setup <cmd>` | Same, with a post-clone setup command |
+| `mise run list-projects` | List all projects in `all-in-one/` |
+| `mise run list-workspaces` | List all workspaces in `workspaces/` |
+| `mise run create-workspace <name> [projects]...` | Create a new workspace with boilerplate files and optional initial worktrees |
+| `mise run create-workspace --no-editor <name> [projects]...` | Same, skipping the IDE prompt |
 | `mise run add-worktree <project> [workspace]` | Add a project worktree to a workspace |
 | `mise run remove-worktree <project> [workspace]` | Remove a project worktree |
 | `mise run delete-workspace <workspace>` | Delete a workspace, removing all worktrees and branches |

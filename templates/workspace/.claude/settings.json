@@ -1,3 +1,7 @@
 {
-  "autoMemoryDirectory": ".claude/memory"
+  "autoMemoryDirectory": ".claude/memory",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
 }

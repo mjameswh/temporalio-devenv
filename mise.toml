@@ -3,7 +3,7 @@ node = { version = "24", postinstall = "corepack enable pnpm" }
 python = "3.12"
 dotnet = "10"
 rust = "1.93.1"
-java = "temurin-23"
+java = "temurin-17"
 ruby = "4.0"
 jq = "latest"
 go = "1.26.1"

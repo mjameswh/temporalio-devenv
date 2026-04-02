@@ -16,8 +16,13 @@
       "Bash(git show *)",
       "Bash(git status *)",
       "Bash(cargo test *)",
-      "Bash(./gradlew *)"
+      "Bash(./gradlew *)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   },
-  "autoMemoryDirectory": ".claude/memory"
+  "autoMemoryDirectory": ".claude/memory",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
 }

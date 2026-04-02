@@ -51,7 +51,7 @@ echo "Created workspace: workspaces/$WORKSPACE_NAME"
 for project in "${PROJECTS[@]}"; do
   [[ -z "$project" ]] && continue
   echo "Adding worktree: $project"
-  (cd "$WORKSPACE_DIR" && "$DEVENV/mise/tasks/add-worktree" "$project")
+  mise run add-worktree "$project" "$WORKSPACE_NAME"
 done
 
 if [[ "$OPEN_EDITOR" == "yes" ]]; then

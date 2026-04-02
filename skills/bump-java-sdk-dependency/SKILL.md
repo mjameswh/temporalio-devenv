@@ -1,4 +1,10 @@
-# Skill: Bump Temporal Java SDK dependency across downstream repos
+---
+name: bump-java-sdk-dependency
+description: Bump Temporal Java SDK dependency across downstream repos (samples-java, omes, features) after a new SDK release.
+allowed-tools: Read, Edit, Grep, Bash(git *), Bash(gh pr *)
+---
+
+# Bump Temporal Java SDK dependency across downstream repos
 
 Use this when a new Temporal Java SDK release (e.g. X.Y.Z) has been published and the following repos need their dependency updated, committed, pushed, and PRs opened.
 
@@ -14,25 +20,26 @@ Use this when a new Temporal Java SDK release (e.g. X.Y.Z) has been published an
 | --------------------------- | ----------------------- | --------------------------- | ------------------------------------------------- |
 | `temporal-sdk-java-samples` | temporalio/samples-java | `build.gradle` (root)       | In `ext { ... }`: set `javaSDKVersion = 'X.Y.Z'`  |
 | `omes`                      | temporalio/omes         | `workers/java/build.gradle` | `implementation 'io.temporal:temporal-sdk:X.Y.Z'` |
-| `features`                  | temporalio/features     | `build.gradle` (root)       | `implementation 'io.temporal:temporal-sdk:X.Y.Z'` |
 
 Replace `X.Y.Z` with the new SDK version (e.g. `1.33.0`).
+
+As of April 2026, we no longer need to bump the `features` repo on SDK releases.
 
 ## Steps (per repo)
 
 For each of the three worktrees, using the **new version number** (e.g. `1.33.0`):
 
-1. **Update dependency**  
+1. **Update dependency**
    Edit the file(s) in the table above and set the Java SDK version to the new release (e.g. `1.33.0`).
 
-2. **Commit and push**  
-   From the repo’s worktree directory:
+2. **Commit and push**
+   From the repo's worktree directory:
    - `git add <changed files>`
    - `git commit -m "Bump Java SDK dependency to X.Y.Z"`
    - `git push origin <current-branch>`
      (Use the actual branch name, e.g. `java-1.33.0-update-others`.)
 
-3. **Open PR**  
+3. **Open PR**
    From the same directory:
    - `gh pr create --base main --title "Bump Java SDK dependency to X.Y.Z" --body "Bump Java SDK dependency to X.Y.Z"`
 
@@ -48,5 +55,5 @@ After finishing all three repos, list the three PR URLs, for example:
 
 ## Notes
 
-- Worktrees may store git metadata in the main repo (e.g. `.git/worktrees/...` outside the workspace). If `git add`/`commit` fail with “Operation not permitted” on a path outside the workspace, run with permissions that allow writing there (e.g. full sandbox disable / “all”).
+- Worktrees may store git metadata in the main repo (e.g. `.git/worktrees/...` outside the workspace). If `git add`/`commit` fail with "Operation not permitted" on a path outside the workspace, run with permissions that allow writing there (e.g. full sandbox disable / "all").
 - Only the **Java** SDK is updated; leave Python/Go/TS dependency versions unchanged unless explicitly requested.
