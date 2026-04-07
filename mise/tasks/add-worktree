@@ -70,7 +70,7 @@ if git -C "$PROJECT_DIR" show-ref --quiet "refs/heads/$BRANCH"; then
   git -C "$PROJECT_DIR" worktree add "$WORKTREE_DIR" "$BRANCH"
 else
   echo "Creating branch '$BRANCH' in $PROJECT..."
-  git -C "$PROJECT_DIR" worktree add "$WORKTREE_DIR" -b "$BRANCH"
+  git -C "$PROJECT_DIR" worktree add "$WORKTREE_DIR" -b "$BRANCH" --no-track main@{upstream}
 fi
 
 # --- initialize submodules if present ---
