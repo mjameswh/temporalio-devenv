@@ -22,7 +22,17 @@ IFS=' ' read -ra PROJECTS <<< "${usage_projects:-}"
 # --- create workspace directory ---
 
 DATE=$(date +%Y%m%d)
-WORKSPACE_NAME="${DATE}-${DESCRIPTION}"
+if [[ "$DESCRIPTION" =~ ^([0-9]{8})-(.+)$ ]]; then
+  PROVIDED_DATE="${BASH_REMATCH[1]}"
+  if [[ "$PROVIDED_DATE" != "$DATE" ]]; then
+    echo "Error: workspace name '$DESCRIPTION' has date prefix '$PROVIDED_DATE' but today is '$DATE'."
+    echo "Either use today's date or omit the prefix (it will be prepended automatically)."
+    exit 1
+  fi
+  WORKSPACE_NAME="$DESCRIPTION"
+else
+  WORKSPACE_NAME="${DATE}-${DESCRIPTION}"
+fi
 WORKSPACE_DIR="$DEVENV/workspaces/$WORKSPACE_NAME"
 
 if [[ -d "$WORKSPACE_DIR" ]]; then

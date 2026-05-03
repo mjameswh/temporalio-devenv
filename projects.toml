@@ -53,9 +53,8 @@ setup = "go mod download"
 repository = "temporalio/cli"
 setup = "go mod download"
 
-[repos.temporal-sdk-core]
-repository = "temporalio/sdk-core"
-upstream_branch = "master"
+[repos.temporal-sdk-rust]
+repository = "temporalio/sdk-rust"
 setup = "cargo fetch"
 
 [repos.temporal-sdk-dotnet]
@@ -68,7 +67,6 @@ setup = "dotnet restore"
 
 [repos.temporal-sdk-go]
 repository = "temporalio/sdk-go"
-upstream_branch = "master"
 setup = "go mod download"
 
 [repos.temporal-sdk-go-samples]
@@ -106,7 +104,7 @@ setup = "uv sync"
 
 [repos.temporal-sdk-ruby]
 repository = "temporalio/sdk-ruby"
-setup = "bundle install --quiet"
+# setup = "bundle install --quiet"
 
 [repos.temporal-sdk-ruby-samples]
 repository = "temporalio/samples-ruby"

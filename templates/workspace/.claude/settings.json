@@ -3,5 +3,14 @@
   "attribution": {
     "commit": "",
     "pr": ""
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedHosts": [
+        "api.github.com"
+      ]
+    }
   }
 }

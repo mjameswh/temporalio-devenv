@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Read(/**)",
@@ -17,12 +21,11 @@
       "Bash(git status *)",
       "Bash(cargo test *)",
       "Bash(./gradlew *)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)"
     ]
   },
-  "autoMemoryDirectory": ".claude/memory",
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  }
+  "autoMemoryDirectory": ".claude/memory"
 }

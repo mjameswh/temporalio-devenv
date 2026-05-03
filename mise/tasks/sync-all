@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Fetch and fast-forward all repos in all-in-one/ to latest upstream"
+#MISE description="Fetch and reset all repos in all-in-one/ to match upstream (ignored files preserved)"
 #MISE quiet=true
 #
 #USAGE flag "--no-setup" help="Skip setup commands (just git sync)"
@@ -132,11 +132,12 @@ sync_repo() {
     return 1
   fi
 
-  # Fast-forward
+  # Match upstream: discard local commits on this branch and any tracked working-tree
+  # changes (ignored build artifacts are left intact).
   local before after
   before=$(git -C "$dir" rev-parse HEAD)
-  if ! git -C "$dir" merge --ff-only "origin/$upstream_branch" --quiet 2>&1; then
-    printf " MERGE FAILED (local changes?)\n"
+  if ! git -C "$dir" reset --hard --quiet "origin/$upstream_branch" 2>&1; then
+    printf " RESET FAILED\n"
     return 1
   fi
   after=$(git -C "$dir" rev-parse HEAD)
